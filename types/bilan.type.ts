@@ -79,7 +79,7 @@ export interface BilanSecondaireE {
 
 export interface BilanComplet {
   id: string;
-  circonstaciel: Partial<BilanCirconstanciel>;
+  circonstanciel: Partial<BilanCirconstanciel>;
   primaire: Partial<BilanPrimaire>;
   secondaire: {
     A: Partial<BilanSecondaireA>;
