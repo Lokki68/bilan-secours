@@ -3,13 +3,13 @@
 import {cn} from "@/lib/utils";
 
 interface Option {
-  value: string
-  label: string
-  color?: 'default' | 'green' | 'orange' | 'red' | 'blue'
+  readonly value: string
+  readonly label: string
+  readonly color?: 'default' | 'green' | 'orange' | 'red' | 'blue'
 }
 
 interface ToggleButtonGroupProps<T extends string> {
-  options: Option[]
+  options: readonly Option[]
   value: string
   onChange: (value: string) => void
   columns?: 2 | 3 | 4

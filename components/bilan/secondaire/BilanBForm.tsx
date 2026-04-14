@@ -106,8 +106,8 @@ export function BilanBForm() {
           <FieldRow label="Symétrie thoracique">
             <ToggleButtonGroup
                 options={SYMETRIE_OPTIONS}
-                value={String(b.symetrieThórax)}
-                onChange={(v) => updateBilanB({ symetrieThórax: v === 'true' })}
+                value={String(b.symetrieThorax)}
+                onChange={(v) => updateBilanB({ symetrieThorax: v === 'true' })}
                 columns={2}
             />
           </FieldRow>
