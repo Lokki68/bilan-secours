@@ -2,6 +2,7 @@
 
 import {PageHeader} from "@/components/layout/PageHeader";
 import {FileText} from "lucide-react";
+import {ResumeTransmission} from "@/components/bilan/ResumeTransmission";
 
 export default function ResumePage() {
   return (

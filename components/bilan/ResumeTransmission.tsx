@@ -146,6 +146,8 @@ export function ResumeTransmission() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'resume' | 'texte'>('resume');
 
+  console.log(bilan.secondaire.D)
+
   const c = bilan.circonstanciel;
   const p = bilan.primaire;
   const b = bilan.secondaire.B;

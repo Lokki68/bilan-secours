@@ -4,123 +4,146 @@ import { useBilan } from '@/context/BilanContext';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { FieldRow } from '@/components/ui/FieldRow';
 import { ToggleButtonGroup } from '@/components/ui/ToggleButtonGroup';
+import { NavigationButton } from '@/components/bilan/NavigationButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Activity, Gauge, AlertTriangle } from 'lucide-react';
-import {NavigationButton} from "@/components/bilan/NavigationButton";
+import { Wind } from 'lucide-react';
+
+const RYTHME_OPTIONS = [
+  { value: 'REGULIER', label: 'Régulier', color: 'green' },
+  { value: 'IRREGULIER', label: 'Irrégulier', color: 'orange' },
+] as const;
+
+const AMPLITUDE_OPTIONS = [
+  { value: 'NORMALE', label: 'Normale', color: 'green' },
+  { value: 'SUPERFICIELLE', label: 'Superficielle', color: 'orange' },
+  { value: 'PROFONDE', label: 'Profonde', color: 'blue' },
+  { value: 'ABSENTE', label: 'Absente', color: 'red' },
+] as const;
+
+const SYMETRIE_OPTIONS = [
+  { value: 'true', label: 'Symétrique', color: 'green' },
+  { value: 'false', label: 'Asymétrique', color: 'red' },
+] as const;
+
+const MV_OPTIONS = [
+  { value: 'PRESENT', label: 'Présent', color: 'green' },
+  { value: 'DIMINUE', label: 'Diminué', color: 'orange' },
+  { value: 'ABSENT', label: 'Absent', color: 'red' },
+] as const;
+
+const BOOL_OPTIONS = [
+  { value: 'false', label: 'Non', color: 'green' },
+  { value: 'true', label: 'Oui', color: 'red' },
+] as const;
 
 export function BilanBForm() {
   const { bilan, updateBilanB } = useBilan();
   const b = bilan.secondaire.B;
 
-  // Calcul alerte SpO2
-  const spo2Value = parseInt(b.spo2);
-  const spo2Alert = !isNaN(spo2Value) && spo2Value < 95;
-  const spo2Danger = !isNaN(spo2Value) && spo2Value < 90;
-
-  // Calcul alerte FR
-  const frValue = parseInt(b.frequenceRespiratoire);
-  const frAlert = !isNaN(frValue) && (frValue < 12 || frValue > 20);
-
   return (
       <div className="flex flex-col gap-4 p-4 pb-0">
 
-        {/* Fréquence respiratoire */}
+        {/* ── FRÉQUENCE ── */}
         <SectionCard
-            title="Fréquence respiratoire"
-            icon={<Activity className="w-4 h-4" />}
-            urgent={frAlert}
+            title="Fréquence Respiratoire"
+            icon={<Wind className="w-4 h-4" />}
+            urgent={
+                b.detresseRespiratoire ||
+                Number(b.frequenceRespiratoire) < 12 ||
+                Number(b.frequenceRespiratoire) > 20
+            }
         >
-          <FieldRow
-              label="Fréquence"
-              hint="Normale : 12-20 /min"
-              alert={frAlert ? `${frValue}/min — Hors norme !` : undefined}
-          >
-            <div className="relative">
-              <Input
-                  type="number"
-                  placeholder="Ex: 16"
-                  value={b.frequenceRespiratoire}
-                  onChange={(e) =>
-                      updateBilanB({ frequenceRespiratoire: e.target.value })
-                  }
-                  className={cn(
-                      'bg-gray-800 border-gray-700 text-white pr-16 text-lg font-bold',
-                      frAlert && 'border-orange-500',
-                      frValue < 8 && 'border-red-500'
-                  )}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
-              /min
-            </span>
-            </div>
+          <FieldRow label="FR (/min)">
+            <Input
+                type="number"
+                inputMode="numeric"
+                value={b.frequenceRespiratoire}
+                onChange={(e) =>
+                    updateBilanB({ frequenceRespiratoire: e.target.value })
+                }
+                placeholder="Normale: 12–20"
+                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+            />
           </FieldRow>
 
+          {b.frequenceRespiratoire && (
+              <div className="mt-2">
+                {Number(b.frequenceRespiratoire) < 12 && (
+                    <p className="text-orange-400 text-xs font-bold">
+                      ⚠️ Bradypnée (&lt;12/min)
+                    </p>
+                )}
+                {Number(b.frequenceRespiratoire) > 20 && (
+                    <p className="text-orange-400 text-xs font-bold">
+                      ⚠️ Tachypnée (&gt;20/min)
+                    </p>
+                )}
+              </div>
+          )}
+        </SectionCard>
+
+        {/* ── RYTHME & AMPLITUDE ── */}
+        <SectionCard title="Qualité Respiratoire">
           <FieldRow label="Rythme">
             <ToggleButtonGroup
-                options={[
-                  { value: 'REGULIER', label: 'Régulier', color: 'green' },
-                  { value: 'IRREGULIER', label: 'Irrégulier', color: 'red' },
-                ]}
+                options={RYTHME_OPTIONS}
                 value={b.rythme}
-                onChange={(v) => updateBilanB({ rythme: v as typeof b.rythme })}
+                onChange={(v) => updateBilanB({ rythme: v })}
                 columns={2}
-                size="sm"
             />
           </FieldRow>
 
           <FieldRow label="Amplitude">
             <ToggleButtonGroup
-                options={[
-                  { value: 'NORMALE', label: 'Normale', color: 'green' },
-                  { value: 'SUPERFICIELLE', label: 'Superficielle', color: 'orange' },
-                  { value: 'PROFONDE', label: 'Profonde', color: 'orange' },
-                ]}
+                options={AMPLITUDE_OPTIONS}
                 value={b.amplitude}
-                onChange={(v) => updateBilanB({ amplitude: v as typeof b.amplitude })}
+                onChange={(v) => updateBilanB({ amplitude: v })}
+                columns={2}
+            />
+          </FieldRow>
+
+          <FieldRow label="Symétrie thoracique">
+            <ToggleButtonGroup
+                options={SYMETRIE_OPTIONS}
+                value={String(b.symetrieThórax)}
+                onChange={(v) => updateBilanB({ symetrieThórax: v === 'true' })}
+                columns={2}
+            />
+          </FieldRow>
+
+          <FieldRow label="Murmure vésiculaire">
+            <ToggleButtonGroup
+                options={MV_OPTIONS}
+                value={b.murmureVesiculaire}
+                onChange={(v) => updateBilanB({ murmureVesiculaire: v })}
                 columns={3}
-                size="sm"
             />
           </FieldRow>
         </SectionCard>
 
-        {/* SpO2 */}
+        {/* ── SPO2 ── */}
         <SectionCard
-            title="Saturation SpO2"
-            icon={<Gauge className="w-4 h-4" />}
-            urgent={spo2Danger}
+            title="SpO2"
+            icon={<Wind className="w-4 h-4" />}
+            urgent={Number(b.spo2) < 95}
         >
-          <FieldRow
-              label="SpO2"
-              hint="Normale > 95%"
-              alert={
-                spo2Danger
-                    ? `${spo2Value}% — Danger !`
-                    : spo2Alert
-                        ? `${spo2Value}% — Attention`
-                        : undefined
-              }
-          >
-            <div className="relative">
-              <Input
-                  type="number"
-                  placeholder="Ex: 98"
-                  min={0}
-                  max={100}
-                  value={b.spo2}
-                  onChange={(e) => updateBilanB({ spo2: e.target.value })}
-                  className={cn(
-                      'bg-gray-800 border-gray-700 text-white pr-8 text-2xl font-bold h-14',
-                      spo2Alert && !spo2Danger && 'border-orange-500 text-orange-400',
-                      spo2Danger && 'border-red-500 text-red-400'
-                  )}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">
-              %
-            </span>
-            </div>
+          <FieldRow label="SpO2 (%)">
+            <Input
+                type="number"
+                inputMode="numeric"
+                value={b.spo2}
+                onChange={(e) => updateBilanB({ spo2: e.target.value })}
+                placeholder="ex: 98"
+                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+            />
           </FieldRow>
+
+          {b.spo2 && Number(b.spo2) < 95 && (
+              <p className="text-red-400 text-xs font-bold mt-1">
+                🚨 SpO2 basse — oxygénothérapie recommandée
+              </p>
+          )}
 
           <FieldRow label="Sous O2 ?">
             <ToggleButtonGroup
@@ -131,110 +154,64 @@ export function BilanBForm() {
                 value={String(b.spo2SousO2)}
                 onChange={(v) => updateBilanB({ spo2SousO2: v === 'true' })}
                 columns={2}
-                size="sm"
             />
           </FieldRow>
 
           {b.spo2SousO2 && (
-              <FieldRow label="Débit O2">
-                <div className="relative">
-                  <Input
-                      type="number"
-                      placeholder="Ex: 9"
-                      value={b.debitO2}
-                      onChange={(e) => updateBilanB({ debitO2: e.target.value })}
-                      className="bg-gray-800 border-gray-700 text-white pr-16"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-                L/min
-              </span>
-                </div>
+              <FieldRow label="Débit O2 (L/min)">
+                <Input
+                    type="number"
+                    inputMode="decimal"
+                    value={b.debitO2}
+                    onChange={(e) => updateBilanB({ debitO2: e.target.value })}
+                    placeholder="ex: 9"
+                    className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+                />
               </FieldRow>
           )}
         </SectionCard>
 
-        {/* Auscultation */}
-        <SectionCard title="Auscultation">
-          <FieldRow label="Symétrie du thorax">
-            <ToggleButtonGroup
-                options={[
-                  { value: 'true', label: 'Symétrique', color: 'green' },
-                  { value: 'false', label: 'Asymétrique', color: 'red' },
-                ]}
-                value={String(b.symetrieThorax)}
-                onChange={(v) => updateBilanB({ symetrieThorax: v === 'true' })}
-                columns={2}
-                size="sm"
-            />
-          </FieldRow>
-
-          <FieldRow label="Murmure vésiculaire">
-            <ToggleButtonGroup
-                options={[
-                  { value: 'NORMAL', label: 'Normal', color: 'green' },
-                  { value: 'DIMINUE', label: 'Diminué', color: 'orange' },
-                  { value: 'ABSENT', label: 'Absent', color: 'red' },
-                  { value: 'SIBILANTS', label: 'Sibilants', color: 'orange' },
-                  { value: 'RONCHIS', label: 'Ronchis', color: 'orange' },
-                ]}
-                value={b.murmureVesiculaire}
-                onChange={(v) =>
-                    updateBilanB({ murmureVesiculaire: v as typeof b.murmureVesiculaire })
-                }
-                columns={3}
-                size="sm"
-            />
-          </FieldRow>
-        </SectionCard>
-
-        {/* Détresse */}
+        {/* ── DÉTRESSE ── */}
         <SectionCard
-            title="Détresse respiratoire"
-            icon={<AlertTriangle className="w-4 h-4" />}
-            urgent={b.detresseRespiratoire}
+            title="Signes de détresse"
+            urgent={b.detresseRespiratoire || b.signesLutte}
         >
-          <FieldRow label="Détresse respiratoire ?">
+          <FieldRow label="Détresse respiratoire">
             <ToggleButtonGroup
-                options={[
-                  { value: 'false', label: 'Non', color: 'green' },
-                  { value: 'true', label: 'Oui', color: 'red' },
-                ]}
+                options={BOOL_OPTIONS}
                 value={String(b.detresseRespiratoire)}
                 onChange={(v) =>
                     updateBilanB({ detresseRespiratoire: v === 'true' })
                 }
                 columns={2}
-                size="md"
             />
           </FieldRow>
 
-          <FieldRow label="Signes de lutte ?">
+          <FieldRow label="Signes de lutte">
             <ToggleButtonGroup
-                options={[
-                  { value: 'false', label: 'Non', color: 'green' },
-                  { value: 'true', label: 'Oui', color: 'orange' },
-                ]}
+                options={BOOL_OPTIONS}
                 value={String(b.signesLutte)}
                 onChange={(v) => updateBilanB({ signesLutte: v === 'true' })}
                 columns={2}
-                size="sm"
             />
           </FieldRow>
         </SectionCard>
 
+        {/* ── COMMENTAIRE ── */}
         <SectionCard title="Commentaire">
           <Textarea
-              placeholder="Observations ventilatoires..."
               value={b.commentaire}
               onChange={(e) => updateBilanB({ commentaire: e.target.value })}
-              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 min-h-[80px]"
+              placeholder="Observations respiratoires..."
+              rows={3}
+              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 resize-none"
           />
         </SectionCard>
 
         <NavigationButton
             prevPath="/bilan/secondaire/a"
             nextPath="/bilan/secondaire/c"
-            nextLabel="C — Circulation"
+            nextLabel="Secondaire C"
         />
       </div>
   );

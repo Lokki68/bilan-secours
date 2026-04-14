@@ -1,173 +1,165 @@
 'use client';
 
 import { useBilan } from '@/context/BilanContext';
-import { GesteSAP } from '@/types/bilan.types';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { FieldRow } from '@/components/ui/FieldRow';
 import { ToggleButtonGroup } from '@/components/ui/ToggleButtonGroup';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
-import { Brain, Wind, Heart, Droplet, Stethoscope } from 'lucide-react';
+import { Brain, Wind, Heart, Droplets } from 'lucide-react';
 import {NavigationButton} from "@/components/bilan/NavigationButton";
 
-const GESTES: { value: GesteSAP; label: string }[] = [
-  { value: 'PLS', label: 'PLS' },
-  { value: 'LVA', label: 'LVA' },
-  { value: 'ASPIRATION', label: 'Aspiration' },
-  { value: 'CANULE_GUEDEL', label: 'Canule' },
-  { value: 'INSUFFLATIONS', label: 'Insufflations' },
-  { value: 'MCE', label: 'MCE' },
-  { value: 'DAE', label: 'DAE' },
-  { value: 'O2', label: 'O2' },
-  { value: 'GARROT', label: 'Garrot' },
-  { value: 'PANSEMENT_COMPRESSIF', label: 'Pans. compressif' },
-  { value: 'IMMOBILISATION', label: 'Immobilisation' },
-  { value: 'COLLIER_CERVICAL', label: 'Collier cervical' },
-  { value: 'COUVERTURE_SURVIE', label: 'Couv. survie' },
-  { value: 'MATELAS_COQUILLE', label: 'Matelas coquille' },
-];
+const CONSCIENCE_OPTIONS = [
+  { value: 'CONSCIENT', label: 'Conscient', color: 'green' },
+  { value: 'INCONSCIENT', label: 'Inconscient', color: 'red' },
+  { value: 'ALTERE', label: 'Altéré', color: 'orange' },
+] as const;
+
+const VENTILATION_OPTIONS = [
+  { value: 'NORMALE', label: 'Normale', color: 'green' },
+  { value: 'ALTEREE', label: 'Altérée', color: 'orange' },
+  { value: 'ABSENTE', label: 'Absente', color: 'red' },
+] as const;
+
+const POULS_OPTIONS = [
+  { value: 'PRESENT_FORT', label: 'Fort', color: 'green' },
+  { value: 'PRESENT_FAIBLE', label: 'Faible', color: 'orange' },
+  { value: 'ABSENT', label: 'Absent', color: 'red' },
+] as const;
+
+const DETRESSE_OPTIONS = [
+  { value: 'false', label: 'Non', color: 'green' },
+  { value: 'true', label: 'Oui', color: 'red' },
+] as const;
 
 export function PrimaireForm() {
   const { bilan, updatePrimaire } = useBilan();
   const p = bilan.primaire;
 
-  const toggleGeste = (geste: GesteSAP) => {
-    const current = p.gestesEffectues;
-    const updated = current.includes(geste)
-        ? current.filter((g) => g !== geste)
-        : [...current, geste];
-    updatePrimaire({ gestesEffectues: updated });
-  };
+  const isDetresse =
+      p.conscience === 'INCONSCIENT' ||
+      p.ventilation === 'ABSENTE' ||
+      p.pouls === 'ABSENT' ||
+      p.hemorragie;
 
   return (
       <div className="flex flex-col gap-4 p-4 pb-0">
 
+        {/* ── ALERTE DÉTRESSE ── */}
+        {isDetresse && (
+            <div className="bg-red-950 border-2 border-red-600 rounded-2xl p-4 flex items-center gap-3 animate-pulse">
+              <span className="text-2xl">🚨</span>
+              <div>
+                <p className="text-red-300 font-black text-sm">DÉTRESSE VITALE</p>
+                <p className="text-red-500 text-xs">Engager les gestes d'urgence</p>
+              </div>
+            </div>
+        )}
+
+        {/* ── CONSCIENCE ── */}
         <SectionCard
-            title="Conscience — AVPU"
+            title="Conscience"
             icon={<Brain className="w-4 h-4" />}
-            urgent={p.conscience === 'INCONSCIENT' || p.conscience === 'DOULEUR'}
+            urgent={p.conscience === 'INCONSCIENT'}
         >
           <ToggleButtonGroup
-              options={[
-                { value: 'ALERTE', label: 'A — Alerte', color: 'green' },
-                { value: 'VERBAL', label: 'V — Verbal', color: 'orange' },
-                { value: 'DOULEUR', label: 'D — Douleur', color: 'orange' },
-                { value: 'INCONSCIENT', label: 'I — Inconscient', color: 'red' },
-              ]}
+              options={CONSCIENCE_OPTIONS}
               value={p.conscience}
               onChange={(v) => updatePrimaire({ conscience: v })}
-              columns={2}
-              size="md"
+              columns={3}
+              size="lg"
           />
         </SectionCard>
 
+        {/* ── VENTILATION ── */}
         <SectionCard
             title="Ventilation"
             icon={<Wind className="w-4 h-4" />}
-            urgent={p.detresseVentilation}
+            urgent={p.ventilation === 'ABSENTE'}
         >
           <ToggleButtonGroup
-              options={[
-                { value: 'NORMALE', label: 'Normale', color: 'green' },
-                { value: 'DIFFICILE', label: 'Difficile', color: 'orange' },
-                { value: 'ANORMALE', label: 'Anormale', color: 'red' },
-                { value: 'ABSENTE', label: 'Absente', color: 'red' },
-              ]}
+              options={VENTILATION_OPTIONS}
               value={p.ventilation}
-              onChange={(v) => {
-                updatePrimaire({
-                  ventilation: v,
-                  detresseVentilation: v === 'ANORMALE' || v === 'ABSENTE' || v === 'DIFFICILE',
-                });
-              }}
-              columns={2}
-              size="md"
+              onChange={(v) => updatePrimaire({ ventilation: v })}
+              columns={3}
+              size="lg"
           />
 
-          <FieldRow label="Fréquence respiratoire" hint="Cycles / min">
-            <div className="relative">
-              <Input
-                  type="number"
-                  placeholder="Ex: 16"
-                  value={p.frequenceRespiratoire}
-                  onChange={(e) =>
-                      updatePrimaire({ frequenceRespiratoire: e.target.value })
-                  }
-                  className="bg-gray-800 border-gray-700 text-white pr-16"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-              /min
-            </span>
-            </div>
-          </FieldRow>
+          {p.ventilation && p.ventilation !== 'ABSENTE' && (
+              <div className="mt-3 pt-3 border-t border-gray-800">
+                <FieldRow label="Fréquence respiratoire (/min)">
+                  <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={p.frequenceRespiratoire}
+                      onChange={(e) =>
+                          updatePrimaire({ frequenceRespiratoire: e.target.value })
+                      }
+                      placeholder="ex: 18"
+                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+                  />
+                </FieldRow>
+              </div>
+          )}
         </SectionCard>
 
+        {/* ── POULS / CIRCULATION ── */}
         <SectionCard
-            title="Circulation"
+            title="Pouls & Circulation"
             icon={<Heart className="w-4 h-4" />}
-            urgent={p.detresseCirculation || (p.hemorragie && !p.hemorragieControlee)}
+            urgent={p.pouls === 'ABSENT'}
         >
-          <FieldRow label="Pouls">
-            <ToggleButtonGroup
-                options={[
-                  { value: 'FORT', label: 'Fort', color: 'green' },
-                  { value: 'PRESENT', label: 'Présent', color: 'green' },
-                  { value: 'FAIBLE', label: 'Faible', color: 'orange' },
-                  { value: 'ABSENT', label: 'Absent', color: 'red' },
-                ]}
-                value={p.pouls}
-                onChange={(v) => {
-                  updatePrimaire({
-                    pouls: v,
-                    detresseCirculation: v === 'ABSENT' || v === 'FAIBLE',
-                  });
-                }}
-                columns={4}
-                size="sm"
-            />
-          </FieldRow>
+          <ToggleButtonGroup
+              options={POULS_OPTIONS}
+              value={p.pouls}
+              onChange={(v) => updatePrimaire({ pouls: v })}
+              columns={3}
+              size="lg"
+          />
 
-          <FieldRow label="Fréquence cardiaque">
-            <div className="relative">
-              <Input
-                  type="number"
-                  placeholder="Ex: 70"
-                  value={p.frequenceCardiaque}
-                  onChange={(e) =>
-                      updatePrimaire({ frequenceCardiaque: e.target.value })
-                  }
-                  className="bg-gray-800 border-gray-700 text-white pr-16"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-              bpm
-            </span>
-            </div>
-          </FieldRow>
+          {p.pouls && p.pouls !== 'ABSENT' && (
+              <div className="mt-3 pt-3 border-t border-gray-800">
+                <FieldRow label="Fréquence cardiaque (/min)">
+                  <Input
+                      type="number"
+                      inputMode="numeric"
+                      value={p.frequenceCardiaque}
+                      onChange={(e) =>
+                          updatePrimaire({ frequenceCardiaque: e.target.value })
+                      }
+                      placeholder="ex: 75"
+                      className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+                  />
+                </FieldRow>
+              </div>
+          )}
+        </SectionCard>
 
-          <FieldRow label="Hémorragie">
+        {/* ── HÉMORRAGIE ── */}
+        <SectionCard
+            title="Hémorragie"
+            icon={<Droplets className="w-4 h-4" />}
+            urgent={p.hemorragie}
+        >
+          <FieldRow label="Hémorragie présente ?">
             <ToggleButtonGroup
-                options={[
-                  { value: 'false', label: 'Non', color: 'green' },
-                  { value: 'true', label: 'Oui', color: 'red' },
-                ]}
+                options={DETRESSE_OPTIONS}
                 value={String(p.hemorragie)}
                 onChange={(v) => updatePrimaire({ hemorragie: v === 'true' })}
                 columns={2}
-                size="sm"
+                size="lg"
             />
           </FieldRow>
 
           {p.hemorragie && (
-              <>
-                <FieldRow label="Localisation hémorragie">
+              <div className="mt-3 pt-3 border-t border-gray-800 space-y-3">
+                <FieldRow label="Localisation">
                   <Input
-                      placeholder="Membre inf. gauche..."
                       value={p.hemorragieLocalisation}
                       onChange={(e) =>
                           updatePrimaire({ hemorragieLocalisation: e.target.value })
                       }
+                      placeholder="Membre, thorax, abdomen..."
                       className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
                   />
                 </FieldRow>
@@ -175,94 +167,35 @@ export function PrimaireForm() {
                 <FieldRow label="Hémorragie contrôlée ?">
                   <ToggleButtonGroup
                       options={[
-                        { value: 'true', label: 'Oui — Contrôlée', color: 'green' },
-                        { value: 'false', label: 'Non — Active', color: 'red' },
+                        { value: 'true', label: 'Oui', color: 'green' },
+                        { value: 'false', label: 'Non', color: 'red' },
                       ]}
                       value={String(p.hemorragieControlee)}
                       onChange={(v) =>
                           updatePrimaire({ hemorragieControlee: v === 'true' })
                       }
                       columns={2}
-                      size="sm"
                   />
                 </FieldRow>
-              </>
-          )}
-        </SectionCard>
-
-        <SectionCard title="Peau" icon={<Droplet className="w-4 h-4" />}>
-          <ToggleButtonGroup
-              options={[
-                { value: 'NORMALE', label: 'Normale', color: 'green' },
-                { value: 'PALE', label: 'Pâle', color: 'orange' },
-                { value: 'ROUGE', label: 'Rouge', color: 'orange' },
-                { value: 'CYANOSEE', label: 'Cyanosée', color: 'red' },
-                { value: 'MARBRE', label: 'Marbrée', color: 'red' },
-                { value: 'ICTERE', label: 'Ictère', color: 'default' },
-              ]}
-              value={p.couleurPeau}
-              onChange={(v) => updatePrimaire({ couleurPeau: v })}
-              columns={3}
-              size="sm"
-          />
-        </SectionCard>
-
-        <SectionCard
-            title="Gestes effectués"
-            icon={<Stethoscope className="w-4 h-4" />}
-        >
-          <div className="flex flex-wrap gap-2">
-            {GESTES.map((geste) => {
-              const isSelected = p.gestesEffectues.includes(geste.value);
-              return (
-                  <button
-                      key={geste.value}
-                      type="button"
-                      onClick={() => toggleGeste(geste.value)}
-                      className={cn(
-                          'px-3 py-1.5 rounded-lg text-sm font-medium border-2 transition-all active:scale-95',
-                          isSelected
-                              ? 'bg-blue-700 border-blue-500 text-white'
-                              : 'bg-gray-800 border-gray-700 text-gray-400'
-                      )}
-                  >
-                    {geste.label}
-                  </button>
-              );
-            })}
-          </div>
-
-          {p.gestesEffectues.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1 border-t border-gray-800">
-            <span className="text-gray-500 text-xs w-full mb-1">
-              {p.gestesEffectues.length} geste(s) sélectionné(s)
-            </span>
-                {p.gestesEffectues.map((g) => (
-                    <Badge
-                        key={g}
-                        variant="secondary"
-                        className="bg-blue-900/50 text-blue-300 border border-blue-800 text-xs"
-                    >
-                      {g}
-                    </Badge>
-                ))}
               </div>
           )}
         </SectionCard>
 
-        <SectionCard title="Observations libres">
+        {/* ── OBSERVATIONS ── */}
+        <SectionCard title="Observations primaires">
           <Textarea
-              placeholder="Informations complémentaires..."
               value={p.observations}
               onChange={(e) => updatePrimaire({ observations: e.target.value })}
-              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 min-h-[80px]"
+              placeholder="Notes d'urgence..."
+              rows={3}
+              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 resize-none"
           />
         </SectionCard>
 
         <NavigationButton
             prevPath="/bilan/circonstanciel"
             nextPath="/bilan/secondaire/a"
-            nextLabel="Bilan Secondaire"
+            nextLabel="Secondaire A"
         />
       </div>
   );

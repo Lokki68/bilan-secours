@@ -4,283 +4,266 @@ import { useBilan } from '@/context/BilanContext';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { FieldRow } from '@/components/ui/FieldRow';
 import { ToggleButtonGroup } from '@/components/ui/ToggleButtonGroup';
+import { NavigationButton } from '@/components/bilan/NavigationButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { Heart, Droplets, Activity, Thermometer } from 'lucide-react';
-import {NavigationButton} from "@/components/bilan/NavigationButton";
+import { Heart, Droplets } from 'lucide-react';
+
+const POULS_LOCALISATION = [
+  { value: 'RADIAL', label: 'Radial' },
+  { value: 'CAROTIDIEN', label: 'Carotidien' },
+  { value: 'FÉMORAL', label: 'Fémoral' },
+] as const;
+
+const COULEUR_PEAU = [
+  { value: 'NORMALE', label: 'Normale', color: 'green' },
+  { value: 'PALE', label: 'Pâle', color: 'blue' },
+  { value: 'CYANOSEE', label: 'Cyanosée', color: 'red' },
+  { value: 'ROUGE', label: 'Rouge', color: 'orange' },
+  { value: 'ICTERE', label: 'Ictère', color: 'orange' },
+] as const;
+
+const TEMPERATURE_PEAU = [
+  { value: 'NORMALE', label: 'Normale', color: 'green' },
+  { value: 'FROIDE', label: 'Froide', color: 'blue' },
+  { value: 'CHAUDE', label: 'Chaude', color: 'red' },
+  { value: 'MOITE', label: 'Moite', color: 'orange' },
+] as const;
+
+const TRC_OPTIONS = [
+  { value: 'NORMAL', label: '< 3s', color: 'green' },
+  { value: 'ALLONGE', label: '≥ 3s', color: 'red' },
+] as const;
+
+const BOOL_OPTIONS = [
+  { value: 'false', label: 'Non', color: 'green' },
+  { value: 'true', label: 'Oui', color: 'red' },
+] as const;
 
 export function BilanCForm() {
   const { bilan, updateBilanC } = useBilan();
   const c = bilan.secondaire.C;
 
-  const fcValue = parseInt(c.frequenceCardiaque);
-  const fcAlert = !isNaN(fcValue) && (fcValue < 50 || fcValue > 120);
-  const fcDanger = !isNaN(fcValue) && (fcValue < 40 || fcValue > 150);
-
-  const glycemieValue = parseFloat(c.glycemie);
-  const glycemieAlert =
-      !isNaN(glycemieValue) && (glycemieValue < 0.7 || glycemieValue > 1.8);
+  const taNum = Number(c.tensionArterielle);
+  const taAbnormal = taNum > 0 && (taNum < 90 || taNum > 140);
 
   return (
       <div className="flex flex-col gap-4 p-4 pb-0">
 
-        {/* Pouls / FC */}
+        {/* ── POULS ── */}
         <SectionCard
-            title="Pouls & Fréquence cardiaque"
+            title="Pouls"
             icon={<Heart className="w-4 h-4" />}
-            urgent={fcDanger}
+            urgent={
+                Number(c.frequenceCardiaque) < 50 ||
+                Number(c.frequenceCardiaque) > 120
+            }
         >
-          <FieldRow label="Qualité du pouls">
+          <FieldRow label="Localisation pouls">
             <ToggleButtonGroup
-                options={[
-                  { value: 'FORT', label: 'Fort', color: 'green' },
-                  { value: 'PRESENT', label: 'Présent', color: 'green' },
-                  { value: 'FAIBLE', label: 'Faible', color: 'orange' },
-                  { value: 'ABSENT', label: 'Absent', color: 'red' },
-                ]}
-                value={c.pouls}
-                onChange={(v) => updateBilanC({ pouls: v })}
-                columns={4}
-                size="sm"
-            />
-          </FieldRow>
-
-          <FieldRow label="Localisation du pouls">
-            <ToggleButtonGroup
-                options={[
-                  { value: 'Radial', label: 'Radial' },
-                  { value: 'Carotidien', label: 'Carotidien' },
-                  { value: 'Fémoral', label: 'Fémoral' },
-                  { value: 'Non perçu', label: 'Non perçu', color: 'red' },
-                ]}
+                options={POULS_LOCALISATION}
                 value={c.poulsLocalisation}
                 onChange={(v) => updateBilanC({ poulsLocalisation: v })}
-                columns={4}
-                size="sm"
+                columns={3}
             />
           </FieldRow>
 
-          <FieldRow
-              label="Fréquence cardiaque"
-              hint="Normale : 50-120 bpm"
-              alert={fcDanger ? `${fcValue} bpm — Danger !` : fcAlert ? `${fcValue} bpm — Attention` : undefined}
-          >
-            <div className="relative">
+          <FieldRow label="Fréquence cardiaque (/min)">
+            <Input
+                type="number"
+                inputMode="numeric"
+                value={c.frequenceCardiaque}
+                onChange={(e) =>
+                    updateBilanC({ frequenceCardiaque: e.target.value })
+                }
+                placeholder="ex: 75"
+                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+            />
+          </FieldRow>
+
+          {c.frequenceCardiaque && (
+              <div className="mt-1">
+                {Number(c.frequenceCardiaque) < 50 && (
+                    <p className="text-orange-400 text-xs font-bold">
+                      ⚠️ Bradycardie (&lt;50/min)
+                    </p>
+                )}
+                {Number(c.frequenceCardiaque) > 120 && (
+                    <p className="text-orange-400 text-xs font-bold">
+                      ⚠️ Tachycardie (&gt;120/min)
+                    </p>
+                )}
+              </div>
+          )}
+        </SectionCard>
+
+        {/* ── TENSION ARTÉRIELLE ── */}
+        <SectionCard
+            title="Tension Artérielle"
+            urgent={taAbnormal}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <FieldRow label="Systolique (mmHg)">
               <Input
                   type="number"
-                  placeholder="Ex: 70"
-                  value={c.frequenceCardiaque}
-                  onChange={(e) => updateBilanC({ frequenceCardiaque: e.target.value })}
-                  className={cn(
-                      'bg-gray-800 border-gray-700 text-white pr-16 text-2xl font-bold h-14',
-                      fcAlert && !fcDanger && 'border-orange-500 text-orange-400',
-                      fcDanger && 'border-red-500 text-red-400'
-                  )}
+                  inputMode="numeric"
+                  value={c.tensionArterielle}
+                  onChange={(e) =>
+                      updateBilanC({ tensionArterielle: e.target.value })
+                  }
+                  placeholder="ex: 120"
+                  className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-bold">
-              bpm
-            </span>
-            </div>
-          </FieldRow>
+            </FieldRow>
+
+            <FieldRow label="Diastolique (mmHg)">
+              <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={c.tensionDiastolique}
+                  onChange={(e) =>
+                      updateBilanC({ tensionDiastolique: e.target.value })
+                  }
+                  placeholder="ex: 80"
+                  className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+              />
+            </FieldRow>
+          </div>
+
+          {taAbnormal && (
+              <p className="text-red-400 text-xs font-bold mt-2">
+                🚨 TA anormale — surveiller
+              </p>
+          )}
         </SectionCard>
 
-        {/* Tension artérielle */}
-        <SectionCard title="Tension artérielle" icon={<Activity className="w-4 h-4" />}>
-          <FieldRow label="TA Systolique / Diastolique" hint="mmHg">
-            <div className="flex gap-2 items-center">
-              <div className="relative flex-1">
-                <Input
-                    type="number"
-                    placeholder="120"
-                    value={c.tensionArterielle}
-                    onChange={(e) =>
-                        updateBilanC({ tensionArterielle: e.target.value })
-                    }
-                    className="bg-gray-800 border-gray-700 text-white text-xl font-bold h-14 text-center"
-                />
-                <span className="absolute -bottom-4 left-0 right-0 text-center text-gray-500 text-[10px]">
-                Systolique
-              </span>
-              </div>
-              <span className="text-gray-500 text-2xl font-light pb-2">/</span>
-              <div className="relative flex-1">
-                <Input
-                    type="number"
-                    placeholder="80"
-                    value={c.tensionDiastolique}
-                    onChange={(e) =>
-                        updateBilanC({ tensionDiastolique: e.target.value })
-                    }
-                    className="bg-gray-800 border-gray-700 text-white text-xl font-bold h-14 text-center"
-                />
-                <span className="absolute -bottom-4 left-0 right-0 text-center text-gray-500 text-[10px]">
-                Diastolique
-              </span>
-              </div>
-              <span className="text-gray-500 text-xs pb-2">mmHg</span>
-            </div>
-          </FieldRow>
-        </SectionCard>
-
-        {/* Peau & Perfusion */}
-        <SectionCard title="Peau & Perfusion" icon={<Thermometer className="w-4 h-4" />}>
-          <FieldRow label="Couleur de la peau">
+        {/* ── PEAU ── */}
+        <SectionCard title="État cutané">
+          <FieldRow label="Couleur">
             <ToggleButtonGroup
-                options={[
-                  { value: 'NORMALE', label: 'Normale', color: 'green' },
-                  { value: 'PALE', label: 'Pâle', color: 'orange' },
-                  { value: 'ROUGE', label: 'Rouge', color: 'orange' },
-                  { value: 'CYANOSEE', label: 'Cyanosée', color: 'red' },
-                  { value: 'MARBRE', label: 'Marbrée', color: 'red' },
-                  { value: 'ICTERE', label: 'Ictère', color: 'default' },
-                ]}
+                options={COULEUR_PEAU}
                 value={c.couleurPeau}
                 onChange={(v) => updateBilanC({ couleurPeau: v })}
                 columns={3}
-                size="sm"
             />
           </FieldRow>
 
-          <FieldRow label="Température cutanée">
+          <FieldRow label="Température">
             <ToggleButtonGroup
-                options={[
-                  { value: 'CHAUDE', label: 'Chaude', color: 'orange' },
-                  { value: 'TIEDE', label: 'Tiède', color: 'green' },
-                  { value: 'FROIDE', label: 'Froide', color: 'blue' },
-                ]}
+                options={TEMPERATURE_PEAU}
                 value={c.temperaturePeau}
-                onChange={(v) => updateBilanC({ temperaturePeau: v as typeof c.temperaturePeau })}
-                columns={3}
-                size="sm"
+                onChange={(v) => updateBilanC({ temperaturePeau: v })}
+                columns={2}
             />
           </FieldRow>
 
           <FieldRow label="Sueurs">
             <ToggleButtonGroup
-                options={[
-                  { value: 'false', label: 'Non', color: 'green' },
-                  { value: 'true', label: 'Oui', color: 'orange' },
-                ]}
+                options={BOOL_OPTIONS}
                 value={String(c.sueurs)}
                 onChange={(v) => updateBilanC({ sueurs: v === 'true' })}
                 columns={2}
-                size="sm"
             />
           </FieldRow>
 
-          <FieldRow label="TRC (Temps Recoloration Cutanée)" hint="Normale ≤ 2s">
-            <div className="relative">
-              <Input
-                  type="number"
-                  placeholder="Ex: 2"
-                  value={c.trc}
-                  onChange={(e) =>
-                      updateBilanC({ trc: e.target.value })
-                  }
-                  className="bg-gray-800 border-gray-700 text-white pr-8"
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-              s
-            </span>
-            </div>
+          <FieldRow label="TRC">
+            <ToggleButtonGroup
+                options={TRC_OPTIONS}
+                value={c.trc}
+                onChange={(v) => updateBilanC({ trc: v })}
+                columns={2}
+            />
           </FieldRow>
         </SectionCard>
 
-        {/* Hémorragie */}
+        {/* ── HÉMORRAGIE ── */}
         <SectionCard
             title="Hémorragie"
             icon={<Droplets className="w-4 h-4" />}
-            urgent={c.hemorragie && !c.hemorragieControlee}
+            urgent={c.hemorragie}
         >
-          <FieldRow label="Hémorragie active ?">
+          <FieldRow label="Hémorragie présente ?">
             <ToggleButtonGroup
-                options={[
-                  { value: 'false', label: 'Non', color: 'green' },
-                  { value: 'true', label: 'Oui', color: 'red' },
-                ]}
+                options={BOOL_OPTIONS}
                 value={String(c.hemorragie)}
                 onChange={(v) => updateBilanC({ hemorragie: v === 'true' })}
                 columns={2}
-                size="md"
             />
           </FieldRow>
 
           {c.hemorragie && (
-              <>
+              <div className="mt-3 pt-3 border-t border-gray-800 space-y-3">
                 <FieldRow label="Localisation">
                   <Input
-                      placeholder="Membre, plaie..."
                       value={c.hemorragieLocalisation}
                       onChange={(e) =>
                           updateBilanC({ hemorragieLocalisation: e.target.value })
                       }
+                      placeholder="Membre, thorax..."
                       className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
                   />
                 </FieldRow>
-
                 <FieldRow label="Contrôlée ?">
                   <ToggleButtonGroup
                       options={[
-                        { value: 'true', label: 'Oui — Contrôlée', color: 'green' },
-                        { value: 'false', label: 'Non — Active', color: 'red' },
+                        { value: 'true', label: 'Oui', color: 'green' },
+                        { value: 'false', label: 'Non', color: 'red' },
                       ]}
                       value={String(c.hemorragieControlee)}
                       onChange={(v) =>
                           updateBilanC({ hemorragieControlee: v === 'true' })
                       }
                       columns={2}
-                      size="sm"
                   />
                 </FieldRow>
-              </>
+              </div>
           )}
         </SectionCard>
 
-        {/* Glycémie */}
-        <SectionCard title="Glycémie" icon={<Activity className="w-4 h-4" />}>
-          <FieldRow
-              label="Glycémie capillaire"
-              hint="Normale : 0.70 - 1.10 g/L"
-              alert={glycemieAlert ? `${glycemieValue} g/L — Hors norme` : undefined}
-          >
-            <div className="relative">
-              <Input
-                  type="number"
-                  step="0.01"
-                  placeholder="Ex: 0.95"
-                  value={c.glycemie}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    updateBilanC({
-                      glycemie: e.target.value,
-                    });
-                  }}
-                  className={cn(
-                      'bg-gray-800 border-gray-700 text-white pr-12',
-                      glycemieAlert && 'border-orange-500 text-orange-400'
-                  )}
-              />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">
-              g/L
-            </span>
-            </div>
+        {/* ── GLYCÉMIE ── */}
+        <SectionCard title="Glycémie capillaire">
+          <FieldRow label="Glycémie (g/L)">
+            <Input
+                type="number"
+                inputMode="decimal"
+                value={c.glycemie}
+                onChange={(e) => updateBilanC({ glycemie: e.target.value })}
+                placeholder="ex: 1.20"
+                className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600"
+            />
           </FieldRow>
+
+          {c.glycemie && (
+              <div className="mt-1">
+                {Number(c.glycemie) < 0.6 && (
+                    <p className="text-red-400 text-xs font-bold">
+                      🚨 Hypoglycémie sévère
+                    </p>
+                )}
+                {Number(c.glycemie) > 2.0 && (
+                    <p className="text-orange-400 text-xs font-bold">
+                      ⚠️ Hyperglycémie
+                    </p>
+                )}
+              </div>
+          )}
         </SectionCard>
 
+        {/* ── COMMENTAIRE ── */}
         <SectionCard title="Commentaire">
           <Textarea
-              placeholder="Observations circulatoires..."
               value={c.commentaire}
               onChange={(e) => updateBilanC({ commentaire: e.target.value })}
-              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 min-h-[80px]"
+              placeholder="Observations circulatoires..."
+              rows={3}
+              className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-600 resize-none"
           />
         </SectionCard>
 
         <NavigationButton
             prevPath="/bilan/secondaire/b"
             nextPath="/bilan/secondaire/d"
-            nextLabel="D — Neurologique"
+            nextLabel="Secondaire D"
         />
       </div>
   );
