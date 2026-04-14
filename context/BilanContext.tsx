@@ -1,209 +1,289 @@
-'use client'
+'use client';
 
 import {
-  BilanCirconstanciel,
-  BilanComplet,
-  BilanPrimaire,
-  BilanSecondaireA,
-  BilanSecondaireB,
-  BilanSecondaireC,
-  BilanSecondaireD, BilanSecondaireE, defaultBilanComplet
-} from "@/types/bilan.type";
-import React, {createContext, useCallback, useContext, useEffect, useState} from "react";
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from 'react';
 
-const SESSION_KEY = 'bilan_secours_session'
+// ============================================================
+// ÉTAT INITIAL
+// ============================================================
 
-export interface CompletionStatus {
-  circonstanciel: boolean;
-  primaire: boolean;
-  secondaireA: boolean;
-  secondaireB: boolean;
-  secondaireC: boolean;
-  secondaireD: boolean;
-  secondaireE: boolean;
-}
+const initialBilan = {
+  circonstanciel: {
+    dateHeure: '',
+    lieu: '',
+    typeIntervention: '',
+    age: '',
+    sexe: '',
+    poids: '',
+    mecanisme: '',
+    circonstances: '',
+    antecedents: '',
+    medicaments: '',
+    allergies: '',
+    medecinTraitant: '',
+  },
+  primaire: {
+    conscience: '',
+    ventilation: '',
+    frequenceRespiratoire: '',
+    pouls: '',
+    frequenceCardiaque: '',
+    hemorragie: false,
+    hemorragieLocalisation: '',
+    hemorragieControlee: false,
+    detresse: false,
+    observations: '',
+  },
+  secondaire: {
+    A: {
+      voiesAeriennes: '',
+      corpsEtranger: false,
+      corpsEtrangerType: '',
+      position: '',
+      traumaCervical: false,
+      collierCervical: false,
+      commentaire: '',
+    },
+    B: {
+      frequenceRespiratoire: '',
+      rythme: '',
+      amplitude: '',
+      spo2: '',
+      spo2SousO2: false,
+      debitO2: '',
+      symetrieThorax: true,
+      murmureVesiculaire: '',
+      detresseRespiratoire: false,
+      signesLutte: false,
+      commentaire: '',
+    },
+    C: {
+      pouls: '',
+      poulsLocalisation: '',
+      frequenceCardiaque: '',
+      tensionArterielle: '',
+      tensionDiastolique: '',
+      couleurPeau: '',
+      temperaturePeau: '',
+      sueurs: false,
+      trc: '',
+      hemorragie: false,
+      hemorragieLocalisation: '',
+      hemorragieControlee: false,
+      glycemie: '',
+      commentaire: '',
+    },
+    D: {
+      avpu: '',
+      conscience: '',
+      glasgowYeux: 4,
+      glasgowVerbal: 5,
+      glasgowMoteur: 6,
+      scoreGlasgow: 15,
+      pupilles: '',
+      reactionPupilles: '',
+      deficit: false,
+      deficitType: '',
+      convulsions: false,
+      agitation: false,
+      glycemie: '',
+      commentaire: '',
+    },
+    E: {
+      temperature: '',
+      hypothermie: false,
+      hyperthermie: false,
+      plaies: false,
+      brulures: false,
+      fractures: false,
+      deformations: false,
+      oedemes: false,
+      tete: '',
+      cou: '',
+      thorax: '',
+      abdomen: '',
+      bassin: '',
+      membreSupDroit: '',
+      membreSupGauche: '',
+      membreInfDroit: '',
+      membreInfGauche: '',
+      dos: '',
+      commentaire: '',
+    },
+  },
+  gestes: {
+    liste: [] as string[],
+    o2: false,
+    debitO2: '',
+    dae: false,
+    daeChocs: 0,
+    immobilisation: false,
+    immobilisationType: '',
+    perfusion: false,
+    perfusionType: '',
+    medicaments: '',
+    commentaire: '',
+  },
+};
+
+export type BilanState = typeof initialBilan;
+
+// ============================================================
+// CONTEXT
+// ============================================================
 
 interface BilanContextType {
-  bilan: BilanComplet;
-
-  updateCirconstanciel: (data: Partial<BilanCirconstanciel>) => void;
-  updatePrimaire: (data: Partial<BilanPrimaire>) => void;
-  updateBilanA: (data: Partial<BilanSecondaireA>) => void;
-  updateBilanB: (data: Partial<BilanSecondaireB>) => void;
-  updateBilanC: (data: Partial<BilanSecondaireC>) => void;
-  updateBilanD: (data: Partial<BilanSecondaireD>) => void;
-  updateBilanE: (data: Partial<BilanSecondaireE>) => void;
-  resetBilan: () => void;
-  isInitialized: boolean;
-  completionStatus: CompletionStatus;
+  bilan: BilanState;
+  updateCirconstanciel: (data: Partial<BilanState['circonstanciel']>) => void;
+  updatePrimaire: (data: Partial<BilanState['primaire']>) => void;
+  updateBilanA: (data: Partial<BilanState['secondaire']['A']>) => void;
+  updateBilanB: (data: Partial<BilanState['secondaire']['B']>) => void;
+  updateBilanC: (data: Partial<BilanState['secondaire']['C']>) => void;
+  updateBilanD: (data: Partial<BilanState['secondaire']['D']>) => void;
+  updateBilanE: (data: Partial<BilanState['secondaire']['E']>) => void;
+  updateGestes: (data: Partial<BilanState['gestes']>) => void;
+  clearBilan: () => void;
+  completionRate: number;
 }
 
-function checkCompletion(bilan: BilanComplet): CompletionStatus {
-  const c = bilan.circonstanciel;
-  const p = bilan.primaire;
-  const {A, B, C: bc, D, E} = bilan.secondaire;
+const BilanContext = createContext<BilanContextType | null>(null);
 
-  return {
-    circonstanciel: !!(c.lieu && c.typeIntervention && c.dateHeure),
-    primaire: !!(p.conscience && p.ventilation && p.pouls),
-    secondaireA: !!(A.voiesAeriennes),
-    secondaireB: !!(B.frequenceRespiratoire && B.spo2),
-    secondaireC: !!(bc.frequenceCardiaque || bc.tensionArterielle),
-    secondaireD: !!(D.scoreGlasgow),
-    secondaireE: !!(E.tete || E.thorax || E.abdomen || E.membreSupDroit || E.membreInfDroit)
+// ============================================================
+// STORAGE KEY
+// ============================================================
+
+const STORAGE_KEY = 'bilan-secours-session';
+
+function loadFromStorage(): BilanState {
+  if (typeof window === 'undefined') return initialBilan;
+  try {
+    const stored = sessionStorage.getItem(STORAGE_KEY);
+    if (!stored) return initialBilan;
+    return JSON.parse(stored);
+  } catch {
+    return initialBilan;
   }
 }
 
-const BilanContext = createContext<BilanContextType | null>(null)
-
-export function BilanProvider({children}: {children: React.ReactNode}) {
-  const [bilan, setBilan] = useState<BilanComplet>(defaultBilanComplet)
-  const [isInitialized, setIsInitialized] = useState(false);
-
-  useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(SESSION_KEY)
-      if (stored) {
-        const parsed = JSON.parse(stored) as BilanComplet
-        setBilan(parsed)
-      } else {
-        const now = new Date()
-        const dateHeure = now.toISOString().slice(0, 16)
-        setBilan(prev => ({
-          ...prev,
-          id: crypto.randomUUID(),
-          heureDebutIntervention: dateHeure,
-          circonstanciel: {
-            ...prev.circonstanciel,
-            dateHeure
-          }
-        }))
-      }
-    } catch (error) {
-      console.error('Erreur lecture session: ', error)
-    } finally {
-      setIsInitialized(true)
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!isInitialized) return
-    try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(bilan))
-    } catch (error) {
-      console.error('Erreur sauvegarde session: ', error)
-    }
-  }, [bilan, isInitialized]);
-
-  const updateCirconstanciel = useCallback((data: Partial<BilanComplet['circonstanciel']>) => {
-    setBilan(prev => ({
-      ...prev,
-      circonstanciel: {...prev.circonstanciel, ...data},
-      updatedAt: new Date().toISOString()
-    }))
-  }, [])
-
-  const updatePrimaire = useCallback((data: Partial<BilanComplet['primaire']>) => {
-    setBilan(prev => ({
-      ...prev,
-      primaire: {...prev.primaire, ...data},
-      updatedAt: new Date().toISOString()
-    }))
-  }, [])
-
-  const updateBilanA = useCallback((data: Partial<BilanSecondaireA>) => {
-    setBilan(prev => ({
-      ...prev,
-      secondaire: {
-        ...prev.secondaire,
-        A: { ...prev.secondaire.A, ...data}
-      }
-    }))
-  }, [])
-
-  const updateBilanB = useCallback((data: Partial<BilanSecondaireB>) => {
-    setBilan(prev => ({
-      ...prev,
-      secondaire: {
-        ...prev.secondaire,
-        B: { ...prev.secondaire.B, ...data}
-      }
-    }))
-  }, [])
-
-  const updateBilanC = useCallback((data: Partial<BilanSecondaireC>) => {
-    setBilan(prev => ({
-      ...prev,
-      secondaire: {
-        ...prev.secondaire,
-        C: { ...prev.secondaire.C, ...data}
-      }
-    }))
-  }, [])
-  const updateBilanD = useCallback((data: Partial<BilanSecondaireD>) => {
-    setBilan(prev => ({
-      ...prev,
-      secondaire: {
-        ...prev.secondaire,
-        D: { ...prev.secondaire.D, ...data}
-      }
-    }))
-  }, [])
-  const updateBilanE = useCallback((data: Partial<BilanSecondaireE>) => {
-    setBilan(prev => ({
-      ...prev,
-      secondaire: {
-        ...prev.secondaire,
-        E: { ...prev.secondaire.E, ...data}
-      }
-    }))
-  }, [])
-
-
-  const resetBilan = useCallback(() => {
-    try {
-      sessionStorage.removeItem(SESSION_KEY)
-    } catch (error) {
-      console.error('Erreur suppression sessionStorage: ', error)
-    }
-
-    const now = new Date()
-    const dateHeure = now.toISOString().slice(0, 16)
-
-    setBilan(prev => ({
-      ...prev,
-      id: crypto.randomUUID(),
-      heureDebutIntervention: dateHeure,
-      circonstanciel: {
-        ...prev.circonstanciel,
-        dateHeure
-      }
-    }))
-  }, [])
-
-  const completionStatus = checkCompletion(bilan)
-
-  return (
-      <BilanContext.Provider value={{
-        bilan,
-        updateCirconstanciel,
-        updatePrimaire,
-        updateBilanA,
-        updateBilanB,
-        updateBilanC,
-        updateBilanD,
-        updateBilanE,
-        resetBilan,
-        isInitialized,
-        completionStatus
-      }}>
-        {children}
-      </BilanContext.Provider>
-  )
+function saveToStorage(bilan: BilanState) {
+  if (typeof window === 'undefined') return;
+  try {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(bilan));
+  } catch {
+    console.error('Erreur sessionStorage');
+  }
 }
 
-export function useBilan() {
-  const context = useContext(BilanContext)
-  if (!context) throw new Error('useBilan doit être utilisé dans BilanProvider')
-  return context
+// ============================================================
+// CALCUL COMPLÉTION
+// ============================================================
+
+function computeCompletion(bilan: BilanState): number {
+  const checks = [
+    // Circonstanciel
+    !!bilan.circonstanciel.lieu,
+    !!bilan.circonstanciel.typeIntervention,
+    !!bilan.circonstanciel.age,
+    !!bilan.circonstanciel.sexe,
+    // Primaire
+    !!bilan.primaire.conscience,
+    !!bilan.primaire.ventilation,
+    !!bilan.primaire.pouls,
+    // Secondaire
+    !!bilan.secondaire.A.voiesAeriennes,
+    !!bilan.secondaire.B.frequenceRespiratoire,
+    !!bilan.secondaire.B.spo2,
+    !!bilan.secondaire.C.pouls,
+    !!bilan.secondaire.C.frequenceCardiaque,
+    !!bilan.secondaire.D.avpu,
+    !!bilan.secondaire.E.temperature,
+  ];
+
+  const filled = checks.filter(Boolean).length;
+  return Math.round((filled / checks.length) * 100);
+}
+
+// ============================================================
+// PROVIDER
+// ============================================================
+
+export function BilanProvider({ children }: { children: ReactNode }) {
+  const [bilan, setBilan] = useState<BilanState>(loadFromStorage);
+
+  const update = useCallback(
+      <K extends keyof BilanState>(
+          section: K,
+          data: Partial<BilanState[K]>
+      ) => {
+        setBilan((prev) => {
+          const next = {
+            ...prev,
+            [section]: { ...(prev[section] as object), ...data },
+          };
+          saveToStorage(next);
+          return next;
+        });
+      },
+      []
+  );
+
+  const updateSecondaire = useCallback(
+      <K extends keyof BilanState['secondaire']>(
+          sub: K,
+          data: Partial<BilanState['secondaire'][K]>
+      ) => {
+        setBilan((prev) => {
+          const next = {
+            ...prev,
+            secondaire: {
+              ...prev.secondaire,
+              [sub]: { ...(prev.secondaire[sub] as object), ...data },
+            },
+          };
+          saveToStorage(next);
+          return next;
+        });
+      },
+      []
+  );
+
+  const clearBilan = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEY);
+    setBilan(initialBilan);
+  }, []);
+
+  const value: BilanContextType = {
+    bilan,
+    updateCirconstanciel: (d) => update('circonstanciel', d),
+    updatePrimaire: (d) => update('primaire', d),
+    updateBilanA: (d) => updateSecondaire('A', d),
+    updateBilanB: (d) => updateSecondaire('B', d),
+    updateBilanC: (d) => updateSecondaire('C', d),
+    updateBilanD: (d) => updateSecondaire('D', d),
+    updateBilanE: (d) => updateSecondaire('E', d),
+    updateGestes: (d) => update('gestes', d),
+    clearBilan,
+    completionRate: computeCompletion(bilan),
+  };
+
+  return (
+      <BilanContext.Provider value={value}>
+        {children}
+      </BilanContext.Provider>
+  );
+}
+
+// ============================================================
+// HOOK
+// ============================================================
+
+export function useBilan(): BilanContextType {
+  const ctx = useContext(BilanContext);
+  if (!ctx) throw new Error('useBilan doit être utilisé dans <BilanProvider>');
+  return ctx;
 }
