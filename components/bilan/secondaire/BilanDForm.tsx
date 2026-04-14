@@ -8,7 +8,7 @@ import { NavigationButton } from '@/components/bilan/NavigationButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Brain } from 'lucide-react';
-import { useMemo } from 'react';
+import {useEffect, useMemo} from 'react';
 
 // ── AVPU ──
 const AVPU_OPTIONS = [
@@ -117,6 +117,22 @@ export function BilanDForm() {
       () => d.glasgowYeux + d.glasgowVerbal + d.glasgowMoteur,
       [d.glasgowYeux, d.glasgowVerbal, d.glasgowMoteur]
   );
+
+  const mapConscienceToAvpu = (conscience: string): string => {
+    switch (conscience) {
+      case 'CONSCIENT':   return 'A'; // Alert
+      case 'ALTERE':      return 'V'; // Voice ou P selon contexte
+      case 'INCONSCIENT': return 'U'; // Unresponsive
+      default:            return '';
+    }
+  };
+
+  useEffect(() => {
+    if (!bilan.secondaire.D.avpu && bilan.primaire.conscience) {
+      const avpu = mapConscienceToAvpu(bilan.primaire.conscience);
+      if (avpu) updateBilanD({ avpu });
+    }
+  })
 
   const handleGlasgow = (field: 'glasgowYeux' | 'glasgowVerbal' | 'glasgowMoteur', v: number) => {
     const next = {

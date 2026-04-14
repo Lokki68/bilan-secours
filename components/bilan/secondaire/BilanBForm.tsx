@@ -8,6 +8,7 @@ import { NavigationButton } from '@/components/bilan/NavigationButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Wind } from 'lucide-react';
+import {useEffect} from "react";
 
 const RYTHME_OPTIONS = [
   { value: 'REGULIER', label: 'Régulier', color: 'green' },
@@ -40,6 +41,13 @@ const BOOL_OPTIONS = [
 export function BilanBForm() {
   const { bilan, updateBilanB } = useBilan();
   const b = bilan.secondaire.B;
+
+  useEffect(() => {
+    if (!b.frequenceRespiratoire && bilan.primaire.frequenceRespiratoire) {
+      updateBilanB({frequenceRespiratoire: bilan.primaire.frequenceRespiratoire})
+    }
+  }, []);
+
 
   return (
       <div className="flex flex-col gap-4 p-4 pb-0">

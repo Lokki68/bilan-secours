@@ -1,6 +1,6 @@
 'use client';
 
-import { useBilan } from '@/context/BilanContext';
+import {BilanState, useBilan} from '@/context/BilanContext';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { FieldRow } from '@/components/ui/FieldRow';
 import { ToggleButtonGroup } from '@/components/ui/ToggleButtonGroup';
@@ -8,6 +8,7 @@ import { NavigationButton } from '@/components/bilan/NavigationButton';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Heart, Droplets } from 'lucide-react';
+import {useEffect} from "react";
 
 const POULS_LOCALISATION = [
   { value: 'RADIAL', label: 'Radial' },
@@ -43,6 +44,22 @@ const BOOL_OPTIONS = [
 export function BilanCForm() {
   const { bilan, updateBilanC } = useBilan();
   const c = bilan.secondaire.C;
+
+  useEffect(() => {
+    const updates: Partial<BilanState['secondaire']['C']> = {}
+
+    if (!c.pouls && bilan.primaire.pouls) {
+      updates.pouls = bilan.primaire.pouls
+    }
+
+    if (!c.frequenceCardiaque && bilan.primaire.frequenceCardiaque) {
+      updates.frequenceCardiaque = bilan.primaire.frequenceCardiaque
+    }
+
+    if (Object.keys(updates).length > 0) {
+      updateBilanC(updates)
+    }
+  }, []);
 
   const taNum = Number(c.tensionArterielle);
   const taAbnormal = taNum > 0 && (taNum < 90 || taNum > 140);
