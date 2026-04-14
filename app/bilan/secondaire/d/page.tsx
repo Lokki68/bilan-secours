@@ -11,7 +11,7 @@ export  default  function SecondaireDPage () {
           title='D - Disability'
           subtitle='Etat neurologique'
           icon={<Brain className='w-6 h-6'/>}
-          color='purple'
+          color='orange'
         />
         <BilanDForm />
       </div>
